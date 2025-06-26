@@ -70,13 +70,15 @@ class LikeAdminAllowMiddleware
         $firstSegment = $pathSegments[0];
 
         // 处理API请求
+        // tenantapi 租户端 || api 平台端 api
         if (str_contains($firstSegment, 'api')) {
-            if ($firstSegment !== 'platformapi') {
+            if ($firstSegment === 'tenantapi') {
                 return $this->handleTenantAccess($tenantModel, $domain, $request, $next);
             }
         } else {
+            // admin 租户端  platform 平台端
             // 处理页面请求
-            if ($firstSegment !== 'platform') {
+            if ($firstSegment === 'admin') {
                 return $this->handleTenantAccess($tenantModel, $domain, $request, $next, true);
             } else {
                 if ($domain !== Config::get('project.http_host')) {
@@ -119,6 +121,7 @@ class LikeAdminAllowMiddleware
      */
     private function handleTenantAccess(Tenant $tenantModel, string $domain, $request, Closure $next, bool $isPage = false)
     {
+
         // 通过别名访问租户
         $tenant = $tenantModel->where(['domain_alias' => $domain])->findOrEmpty();
         if (!$tenant->isEmpty() && $tenant->disable === 0 && $tenant->domain_alias_enable === 0) {

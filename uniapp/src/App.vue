@@ -10,6 +10,7 @@ const { getTheme } = useThemeStore()
 const router = useRouter()
 const route = useRoute()
 
+
 //#ifdef H5
 const setH5WebIcon = () => {
     const config = appStore.getWebsiteConfig

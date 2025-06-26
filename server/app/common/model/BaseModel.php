@@ -20,6 +20,7 @@ use app\common\model\tenant\Tenant;
 use app\common\service\FileService;
 use think\facade\Request;
 use think\Model;
+use think\facade\Log;
 
 /**
  * 基础模型
@@ -35,6 +36,9 @@ class BaseModel extends Model
 
     // 不需要检查分表的范围
     private static $notCheckTables = ['tenant','recharge_order','refund_record','official_account_reply','config','hot_search'];
+    
+    // 租户信息静态缓存
+    private static array $tenantInfoCache = [];
 
     /**
      * @notes 公共处理图片，补全路径
@@ -81,6 +85,8 @@ class BaseModel extends Model
                 $tenantId = self::checkTenant() ?: self::checkUser();
                 if ($tenantId) {
                     $tenantInfo = Tenant::where('id', $tenantId)->find()->toArray();
+                    Log::info('日志信息' . $table);
+
                     // 租户分表策略
                     if ($tenantInfo['tactics'] == 1) {
                         $table = $table . '_' . $tenantInfo['sn'];
@@ -104,6 +110,30 @@ class BaseModel extends Model
                 $query->where($table . '.tenant_id', $tenantId);
             }
         }
+    }
+
+    /**
+     * @notes 获取租户信息（带缓存）
+     * @param int $tenantId
+     * @return array
+     * @author 系统优化
+     * @date 2025/06/26
+     */
+    private static function getTenantInfo(int $tenantId): array
+    {
+        // 检查静态缓存
+        if (!isset(self::$tenantInfoCache[$tenantId])) {
+            // 缓存中不存在，查询数据库
+            $tenantInfo = Tenant::where('id', $tenantId)->find();
+            if ($tenantInfo) {
+                self::$tenantInfoCache[$tenantId] = $tenantInfo->toArray();
+            } else {
+                // 租户不存在，返回默认值
+                self::$tenantInfoCache[$tenantId] = ['tactics' => 0, 'sn' => ''];
+            }
+        }
+        
+        return self::$tenantInfoCache[$tenantId];
     }
 
     /**

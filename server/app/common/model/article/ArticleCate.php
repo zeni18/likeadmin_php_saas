@@ -69,7 +69,4 @@ class ArticleCate extends BaseModel
         return Article::where(['cid' => $data['id']])->count('id');
     }
 
-
-
-
 }

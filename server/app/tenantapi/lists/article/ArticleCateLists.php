@@ -69,7 +69,7 @@ class ArticleCateLists extends BaseAdminDataLists implements ListsSearchInterfac
      */
     public function lists(): array
     {
-        $ArticleCateLists = ArticleCate::where($this->searchWhere)
+    $ArticleCateLists = ArticleCate::where($this->searchWhere)
             ->append(['is_show_desc'])
             ->limit($this->limitOffset, $this->limitLength)
             ->order($this->sortOrder)

@@ -1,183 +1,251 @@
 <template>
-    <page-meta :page-style="$theme.pageStyle">
-        <!-- #ifndef H5 -->
-        <navigation-bar
-            :front-color="$theme.navColor"
-            :background-color="$theme.navBgColor"
-        />
-        <!-- #endif -->
-    </page-meta>
-    <view class="index" :style="pageStyle">
-        <!-- 组件 -->
-        <template
-            v-for="(item, index) in state.pages"
-            :key="index"
-        >
-            <template v-if="item.name == 'search'">
-                <w-search
-                    :pageMeta="state.meta"
-                    :content="item.content"
-                    :styles="item.styles"
-                    :percent="percent"
-                    :isLargeScreen="isLargeScreen"
-                />
-            </template>
-            <template v-if="item.name == 'banner'">
-                <w-banner
-                    :content="item.content"
-                    :styles="item.styles"
-                    :isLargeScreen="isLargeScreen"
-                    @change="handleBanner"
-                />
-            </template>
-            <template v-if="item.name == 'nav'">
-                <w-nav :content="item.content" :styles="item.styles"/>
-            </template>
-            <template v-if="item.name == 'middle-banner'">
-                <w-middle-banner :content="item.content" :styles="item.styles" />
-            </template>
-        </template>
-
-        <view class="article" v-if="state.article.length">
-            <view
-                class="flex items-center article-title mx-[20rpx] my-[30rpx] text-lg font-medium"
-            >
-                最新资讯
-            </view>
-            <news-card
-                v-for="item in state.article"
-                :key="item.id"
-                :news-id="item.id"
-                :item="item"
-            />
-        </view>
-
-        <!--  #ifdef H5  -->
-        <view class="text-center py-4 mb-12">
-            <router-navigate
-                class="mx-1 text-xs text-[#495770]"
-                :to="{
-                    path: '/pages/webview/webview',
-                    query: {
-                        url: item.value
-                    }
-                }"
-                v-for="item in appStore.getCopyrightConfig"
-                :key="item.key"
-            >
-                {{ item.key }}
-            </router-navigate>
-        </view>
-        <!--  #endif  -->
-
-        <!-- 返回顶部按钮 -->
-        <u-back-top
-            :scroll-top="scrollTop"
-            :top="100"
-            :customStyle="{
-                backgroundColor: '#FFF',
-                color: '#000',
-                boxShadow: '0px 3px 6px rgba(0, 0, 0, 0.1)'
-            }"
-        >
-        </u-back-top>
-
-        <!--  #ifdef MP  -->
-        <!--  微信小程序隐私弹窗  -->
-        <MpPrivacyPopup></MpPrivacyPopup>
-        <!--  #endif  -->
-
-        <tabbar/>
+  <view class="container">
+    <!-- 顶部搜索栏 -->
+    <view class="search-bar">
+      <input type="text" placeholder="搜索内容" />
     </view>
+
+    <!-- 顶部banner -->
+    <view class="banner">
+      <image src="/static/banner.png" mode="widthFix" />
+    </view>
+
+    <!-- 排行榜部分 -->
+    <view class="rank-section">
+      <view class="rank-list">
+        <view class="rank-item" v-for="(item, index) in rankList" :key="index">
+          <image :src="item.avatar" mode="aspectFill" />
+          <view class="crown" v-if="index < 3">
+            <image :src="`/static/crown${index + 1}.png`" mode="aspectFill" />
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 系统通知 -->
+    <view class="notice">
+      <text>收到了某人打赏20金豆</text>
+    </view>
+
+    <!-- 新人推荐 -->
+    <view class="new-users">
+      <view class="section-title">新人推荐</view>
+      <scroll-view scroll-x class="user-scroll">
+        <view class="user-item" v-for="(user, index) in newUsers" :key="index">
+          <image :src="user.avatar" mode="aspectFill" />
+        </view>
+      </scroll-view>
+    </view>
+
+    <!-- 用户列表 -->
+    <view class="user-list">
+      <view class="user-card" v-for="(user, index) in userList" :key="index">
+        <view class="user-info">
+          <image :src="user.avatar" mode="aspectFill" />
+          <view class="info-right">
+            <view class="name">{{user.name}}</view>
+            <view class="location">{{user.location}}</view>
+          </view>
+        </view>
+        <view class="tags">
+          <text v-for="(tag, idx) in user.tags" :key="idx">#{{tag}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 底部导航栏 -->
+    <view class="tab-bar">
+      <view class="tab-item" v-for="(tab, index) in tabs" :key="index">
+        <image :src="tab.icon" mode="aspectFit" />
+        <text>{{tab.name}}</text>
+      </view>
+    </view>
+  </view>
 </template>
 
-<script setup lang="ts">
-import {getIndex} from '@/api/shop'
-import {onLoad, onPageScroll} from "@dcloudio/uni-app";
-import {computed, reactive, ref} from 'vue'
-import {useAppStore} from '@/stores/app'
-
-// #ifdef MP
-import MpPrivacyPopup from './component/mp-privacy-popup.vue'
-// #endif
-
-const appStore = useAppStore()
-const state = reactive<{
-    pages: any[]
-    meta: any[]
-    article: any[]
-    bannerImage: string
-}>({
-    pages: [],
-    meta: [],
-    article: [],
-    bannerImage: ''
-})
-const scrollTop = ref<number>(0)
-const percent = ref<number>(0)
-
-// 是否联动背景图
-const isLinkage = computed(() => {
-    return state.pages.find((item: any) => item.name === 'banner')?.content.bg_style === 1
-})
-// 是否大屏banner
-const isLargeScreen = computed(() => {
-    return state.pages.find((item: any) => item.name === 'banner')?.content.style === 2
-})
-
-// 根页面样式
-const pageStyle = computed(() => {
-    const {bg_type, bg_color, bg_image} = state.meta[0]?.content ?? {}
-    if (!isLinkage.value) {
-        return bg_type == 1 ?
-            {'background-color': bg_color} :
-            {'background-image': `url(${bg_image})`}
+<script>
+import { Button } from '@/components/ui/button'
+export default {
+  components: {
+  },
+  data() {
+    return {
+      rankList: [
+        { avatar: '/static/avatar1.png' },
+        { avatar: '/static/avatar2.png' },
+        { avatar: '/static/avatar3.png' },
+      ],
+      newUsers: [
+        { avatar: '/static/new1.png' },
+        { avatar: '/static/new2.png' },
+        { avatar: '/static/new3.png' },
+        { avatar: '/static/new4.png' },
+      ],
+    userList: [
+        {
+          avatar: '/static/user1.png',
+          name: '山禾',
+          location: '江苏',
+          tags: ['游戏', '二次元', '动漫']
+        },
+        {
+          avatar: '/static/user2.png',
+          name: '可可',
+          location: '山东',
+          tags: ['舞蹈', '音乐', '直播']
+        },
+      ],
+      tabs: [
+        { icon: '/static/tab1.png', name: '在线聊天' },
+        { icon: '/static/tab2.png', name: '恋人下载' },
+        { icon: '/static/tab3.png', name: '随机匹配' },
+        { icon: '/static/tab4.png', name: '动态广场' },
+        { icon: '/static/tab5.png', name: '我的' },
+      ]
     }
-    else return {'background-image': `url(${state.bannerImage})`}
-})
-
-const handleBanner = (url: string) => {
-    state.bannerImage = url
+  }
 }
-
-const getData = async () => {
-    const data = await getIndex()
-    state.pages = JSON.parse(data?.page?.data)
-    state.meta = JSON.parse(data?.page?.meta)
-    state.article = data.article
-    uni.setNavigationBarTitle({
-        title: state.meta[0].content.title
-    })
-}
-
-onPageScroll((event: any) => {
-    scrollTop.value = event.scrollTop
-    const top = uni.upx2px(100)
-    percent.value = event.scrollTop / top > 1 ? 1 : event.scrollTop / top
-})
-
-onLoad(() => { getData() })
 </script>
 
-<style lang="scss" scoped>
-.index {
-    position: relative;
-    background-repeat: no-repeat;
-    background-size: 100% auto;
-    overflow: hidden;
-    width: 100%;
-    transition: all 1s;
-    min-height: calc(100vh - env(safe-area-inset-bottom));
+<style lang="scss">
+.container {
+  min-height: 100vh;
+  background-color: #f8f8f8;
 }
 
-.article-title {
-    &::before {
-        content: '';
-        width: 8rpx;
-        height: 34rpx;
-        display: block;
-        margin-right: 10rpx;
-        @apply bg-primary;
+.search-bar {
+  padding: 20rpx;
+  background: #fff;
+  input {
+    background: #f5f5f5;
+    padding: 10rpx 20rpx;
+    border-radius: 30rpx;
+  }
+}
+
+.banner {
+  width: 100%;
+  image {
+    width: 100%;
+  }
+}
+
+.rank-section {
+  padding: 20rpx;
+  .rank-list {
+    display: flex;
+    justify-content: center;
+    gap: 30rpx;
+    .rank-item {
+      position: relative;
+      width: 100rpx;
+      height: 100rpx;
+      image {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+      }
+      .crown {
+        position: absolute;
+        top: -20rpx;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 40rpx;
+        height: 40rpx;
+      }
     }
+  }
+}
+
+.notice {
+  margin: 20rpx;
+  padding: 10rpx 20rpx;
+  background: rgba(0,0,0,0.1);
+  border-radius: 30rpx;
+}
+
+.new-users {
+  padding: 20rpx;
+  .section-title {
+    margin-bottom: 20rpx;
+    font-weight: bold;
+  }
+  .user-scroll {
+    white-space: nowrap;
+    .user-item {
+      display: inline-block;
+      margin-right: 20rpx;
+      width: 120rpx;
+      height: 120rpx;
+      image {
+        width: 100%;
+        height: 100%;
+        border-radius: 10rpx;
+      }
+    }
+  }
+}
+
+.user-list {
+  padding: 20rpx;
+  .user-card {
+    background: #fff;
+    border-radius: 20rpx;
+    padding: 20rpx;
+    margin-bottom: 20rpx;
+    .user-info {
+      display: flex;
+      align-items: center;
+      image {
+        width: 100rpx;
+        height: 100rpx;
+        border-radius: 10rpx;
+        margin-right: 20rpx;
+      }
+      .info-right {
+        .name {
+          font-weight: bold;
+        }
+        .location {
+          font-size: 24rpx;
+          color: #666;
+        }
+      }
+    }
+    .tags {
+      margin-top: 10rpx;
+      text {
+        font-size: 24rpx;
+        color: #666;
+        margin-right: 10rpx;
+      }
+    }
+  }
+}
+
+.tab-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 100rpx;
+  background: #fff;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  border-top: 1rpx solid #eee;
+  .tab-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    image {
+      width: 40rpx;
+      height: 40rpx;
+      margin-bottom: 6rpx;
+    }
+    text {
+      font-size: 20rpx;
+    }
+  }
 }
 </style>
